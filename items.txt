@@ -1,0 +1,42 @@
+-- Add these items to your rsg-core/shared/items.lua file
+
+
+['coach_license'] = {
+    ['name'] = 'coach_license',
+    ['label'] = 'Coach License',
+    ['weight'] = 1,
+    ['type'] = 'item',
+    ['image'] = 'coach_license.png',
+    ['unique'] = true,
+    ['useable'] = true,
+    ['shouldClose'] = true,
+    ['combinable'] = nil,
+    ['description'] = 'Official license'
+},
+
+['marriage_license'] = {
+    ['name'] = 'marriage_license',
+    ['label'] = 'Marriage License',
+    ['weight'] = 1,
+    ['type'] = 'item',
+    ['image'] = 'marriage_license.png',
+    ['unique'] = true,
+    ['useable'] = true,
+    ['shouldClose'] = true,
+    ['combinable'] = nil,
+    ['description'] = 'Official Marriage license'
+},
+
+
+['weapon_license'] = {
+    ['name'] = 'weapon_license',
+    ['label'] = 'Weapon Permit',
+    ['weight'] = 1,
+    ['type'] = 'item',
+    ['image'] = 'weapon_license.png',
+    ['unique'] = true,
+    ['useable'] = true,
+    ['shouldClose'] = true,
+    ['combinable'] = nil,
+    ['description'] = 'Legal authorization to carry and use weapons'
+},
