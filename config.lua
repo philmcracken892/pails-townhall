@@ -1,8 +1,7 @@
 Config = {}
-
 Config.Ped = {
-    model = "u_m_m_bht_skinnersearch", 
-    spawn = vector4(-263.08, 762.50, 117.15, 268.17), 
+    model = "amsp_robsdgunsmith_males_01", 
+    spawn = vector4(-798.91, -1194.55, 42.95, 181.95), 
     animation = {
         scenario = "WORLD_HUMAN_COFFEE_DRINK"
     },
@@ -13,37 +12,40 @@ Config.Ped = {
         text = "Town Hall" 
     }
 }
-
 Config.Language = "en" 
 Config.Interact = "ox_target" 
 Config.InteractDistance = 2.5 
 Config.CooldownSeconds = 30 
 Config.WebhookURL = "" -- If you leave this empty, Discord logging is disabled
 
--- NEW: License Configuration
+-- NEW: Job-Specific License Configuration
 Config.Licenses = {
-
+    -- Lawyer licenses
     {
-        item = "weapon_license",
+        item = "weapon_licence",
         label = "Weapon Permit",
         description = "Legal authorization to carry weapons",
         price = 500,
-        icon = "fa-solid fa-gun"
+        icon = "fa-solid fa-gun",
+        jobRequired = "lawyer"
     },
     {
-        item = "coach_license",
-        label = "Driver's License",
-        description = "Permission to operate vehicles",
-        price = 75,
-        icon = "fa-solid fa-car"
-    },
-    {
-        item = "marriage_license",
+        item = "marriage_licence",
         label = "Marriage License",
         description = "Legal document for marriage ceremonies",
         price = 100,
-        icon = "fa-solid fa-heart"
+        icon = "fa-solid fa-heart",
+        jobRequired = "priest"
+    },
+    {
+        item = "coach_licence",
+        label = "Coach License",
+        description = "Permission to operate coach vehicles",
+        price = 75,
+        icon = "fa-solid fa-car",
+        jobRequired = "taxi"
     }
+    
 }
 
 Config.Jobs = {
