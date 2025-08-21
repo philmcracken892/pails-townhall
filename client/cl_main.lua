@@ -303,7 +303,7 @@ local function openJobSpecificLicenseMenu(jobName, jobLabel)
 
         ox_lib:registerContext({
             id = "license_menu_" .. jobName,
-            title = "📜 " .. jobLabel .. " License Shop",
+            title = "📜 " .. " License Shop",
             menu = "job_center_main",
             onBack = openMainMenu,
             options = opts
