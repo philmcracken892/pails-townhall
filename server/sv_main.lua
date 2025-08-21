@@ -2,7 +2,6 @@ local RSGCore = exports["rsg-core"]:GetCoreObject()
 local webhookURL = Config.WebhookURL or ""
 local validJobs, jobLabels = {}, {}
 
-
 if type(Config.Jobs) == "table" then
     for _, job in ipairs(Config.Jobs) do
         if job.jobName and job.label then
@@ -48,8 +47,7 @@ local function sendDiscordLog(oldJob, newJob, userName, charName, playerId)
     )
 end
 
-
-local function sendLicenseDiscordLog(lawyerName, lawyerChar, licenseName, price, playerId)
+local function sendLicenseDiscordLog(lawyerName, lawyerChar, licenseName, price, playerId, jobName)
     if webhookURL == "" then return end
     
     local embed = {
@@ -59,8 +57,9 @@ local function sendLicenseDiscordLog(lawyerName, lawyerChar, licenseName, price,
                 title = "License Purchase",
                 color = 3447003, -- Blue color
                 fields = {
-                    {name = "Lawyer Username", value = lawyerName, inline = false},
-                    {name = "Lawyer Character", value = lawyerChar, inline = false},
+                    {name = "Issuer Username", value = lawyerName, inline = false},
+                    {name = "Issuer Character", value = lawyerChar, inline = false},
+                    {name = "Issuer Job", value = jobLabels[jobName] or jobName, inline = false},
                     {name = "Server ID", value = tostring(playerId), inline = false},
                     {name = "License Purchased", value = licenseName, inline = true},
                     {name = "Price", value = "$" .. tostring(price), inline = true}
@@ -82,7 +81,6 @@ local function sendLicenseDiscordLog(lawyerName, lawyerChar, licenseName, price,
         {["Content-Type"] = "application/json"}
     )
 end
-
 
 RSGCore.Functions.CreateCallback("jobcenter:getPlayerJobAndMoney", function(source, cb)
     local Player = RSGCore.Functions.GetPlayer(source)
@@ -112,11 +110,9 @@ RSGCore.Functions.CreateCallback("jobcenter:getPlayerJob", function(source, cb)
     cb(label)
 end)
 
-
 RegisterNetEvent("jobcenter:purchaseLicense", function(licenseItem, price, licenseName)
     local src = source
     
-   
     if type(licenseItem) ~= "string" or type(price) ~= "number" or type(licenseName) ~= "string" then
         TriggerClientEvent("jobcenter:clientNotify", src, "invalid_license_data", "error")
         return
@@ -127,13 +123,11 @@ RegisterNetEvent("jobcenter:purchaseLicense", function(licenseItem, price, licen
         return
     end
     
-    
     local job = Player.PlayerData.job
-    if not job or job.name ~= "lawyer" then
-        TriggerClientEvent("jobcenter:clientNotify", src, "not_lawyer", "error")
+    if not job then
+        TriggerClientEvent("jobcenter:clientNotify", src, "no_job", "error")
         return
     end
-    
     
     local playerMoney = Player.PlayerData.money.cash or 0
     if playerMoney < price then
@@ -141,11 +135,13 @@ RegisterNetEvent("jobcenter:purchaseLicense", function(licenseItem, price, licen
         return
     end
     
-    
+    -- Validate license exists and is available for this job
     local validLicense = false
     if Config.Licenses then
         for _, license in ipairs(Config.Licenses) do
-            if license.item == licenseItem and license.price == price then
+            if license.item == licenseItem and 
+               license.price == price and 
+               license.jobRequired == job.name then
                 validLicense = true
                 break
             end
@@ -157,31 +153,30 @@ RegisterNetEvent("jobcenter:purchaseLicense", function(licenseItem, price, licen
         return
     end
     
-    
+    -- Remove money
     Player.Functions.RemoveMoney("cash", price, "license-purchase")
     
-    
+    -- Add the license item
     Player.Functions.AddItem(licenseItem, 1, nil, {
-        description = licenseName .. " - Issued by " .. (Player.PlayerData.charinfo.firstname or "Unknown") .. " " .. (Player.PlayerData.charinfo.lastname or "Lawyer"),
+        description = licenseName .. " - Issued by " .. (Player.PlayerData.charinfo.firstname or "Unknown") .. " " .. (Player.PlayerData.charinfo.lastname or "Worker"),
         purchaseDate = os.date("%Y-%m-%d %H:%M:%S")
     })
     
-    
+    -- Get player info for logging
     local userName = GetPlayerName(src) or "Unknown"
     local charinfo = Player.PlayerData.charinfo or {}
     local charName = string.format("%s %s", charinfo.firstname or "Unknown", charinfo.lastname or "Player")
     
-    
+    -- Notify client of success
     TriggerClientEvent("jobcenter:licensePurchaseSuccess", src, licenseName, price)
     
+    -- Log to Discord
+    sendLicenseDiscordLog(userName, charName, licenseName, price, src, job.name)
     
-    sendLicenseDiscordLog(userName, charName, licenseName, price, src)
-    
-    
-    print(string.format("^2[JobCenter] %s (%s) purchased %s for $%d^7", 
-          charName, userName, licenseName, price))
+    -- Console log
+    print(string.format("^2[JobCenter] %s (%s) [%s] purchased %s for $%d^7", 
+          charName, userName, jobLabels[job.name] or job.name, licenseName, price))
 end)
-
 
 RegisterNetEvent("jobcenter:serverSetJob", function(jobName)
     local src = source
