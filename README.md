@@ -1,0 +1,3 @@
+you can change the config to suit job roles you have in game and add items the same ...
+all is configurable in config 
+only lawyers can give out documents.
