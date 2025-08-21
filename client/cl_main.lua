@@ -229,17 +229,36 @@ local function setupInteraction(pedHash)
     end
 end
 
-local function openLicenseMenu()
+-- Function to get licenses for specific job
+local function getLicensesForJob(jobName)
+    if not cfg.Licenses then return {} end
+    
+    local licenses = {}
+    for _, license in ipairs(cfg.Licenses) do
+        if license.jobRequired == jobName then
+            table.insert(licenses, license)
+        end
+    end
+    return licenses
+end
+
+local function openJobSpecificLicenseMenu(jobName, jobLabel)
     RSGCore.Functions.TriggerCallback("jobcenter:getPlayerJobAndMoney", function(playerJob, playerMoney, playerJobName)
-        if playerJobName ~= "lawyer" then -- Changed from playerJob to playerJobName
-            doNotify("not_lawyer", "error")
+        if playerJobName ~= jobName then
+            doNotify("not_correct_job", jobLabel, "error")
+            return
+        end
+
+        local licenses = getLicensesForJob(jobName)
+        if #licenses == 0 then
+            doNotify("no_licenses_available", "error")
             return
         end
 
         local opts = {}
         
-        -- Add each license from config
-        for _, license in ipairs(cfg.Licenses or {}) do
+        -- Add each license for this job
+        for _, license in ipairs(licenses) do
             table.insert(opts, {
                 icon = license.icon or "fa-solid fa-certificate",
                 title = license.label,
@@ -262,7 +281,7 @@ local function openLicenseMenu()
                                 description = "Go back to license selection",
                                 icon = "fa-solid fa-times",
                                 onSelect = function()
-                                    openLicenseMenu()
+                                    openJobSpecificLicenseMenu(jobName, jobLabel)
                                 end
                             }
                         }
@@ -270,8 +289,8 @@ local function openLicenseMenu()
                         ox_lib:registerContext({
                             id = "license_confirm_" .. license.item,
                             title = "✅ Confirm Purchase",
-                            menu = "license_menu",
-                            onBack = openLicenseMenu,
+                            menu = "license_menu_" .. jobName,
+                            onBack = function() openJobSpecificLicenseMenu(jobName, jobLabel) end,
                             options = confirmOpts
                         })
                         ox_lib:showContext("license_confirm_" .. license.item)
@@ -283,13 +302,13 @@ local function openLicenseMenu()
         end
 
         ox_lib:registerContext({
-            id = "license_menu",
-            title = "📜 License Shop",
+            id = "license_menu_" .. jobName,
+            title = "📜 " .. jobLabel .. " License Shop",
             menu = "job_center_main",
             onBack = openMainMenu,
             options = opts
         })
-        ox_lib:showContext("license_menu")
+        ox_lib:showContext("license_menu_" .. jobName)
     end)
 end
 
@@ -301,25 +320,47 @@ local function openMainMenu()
 
         local opts = {
             {
-                title = "?? Current Employment",
+                title = "💼 Current Employment",
                 description = currentJobName,
                 icon = "fa-solid fa-id-badge",
                 disabled = true
             }
         }
 
+        -- Check if current job has licenses available
+        local hasLicenses = false
+        local jobLabel = ""
         
-        if playerJob == "lawyer" then
+        if cfg.Licenses and playerJob then
+            for _, license in ipairs(cfg.Licenses) do
+                if license.jobRequired == playerJob then
+                    hasLicenses = true
+                    break
+                end
+            end
+            
+            -- Get job label
+            for _, job in ipairs(cfg.Jobs or {}) do
+                if job.jobName == playerJob then
+                    jobLabel = job.label
+                    break
+                end
+            end
+        end
+        
+        if hasLicenses then
             table.insert(opts, {
-                title = "?? License Shop",
+                title = "📜 License Shop",
                 description = "Purchase licenses for other players",
                 icon = "fa-solid fa-certificate",
                 arrow = true,
-                onSelect = openLicenseMenu
+                onSelect = function()
+                    openJobSpecificLicenseMenu(playerJob, jobLabel)
+                end
             })
         end
 
-        
+        -- Add job options
         for idx, job in ipairs(cfg.Jobs or {}) do
             table.insert(opts, {
                 icon = job.icon or "fa-solid fa-briefcase",
@@ -361,7 +402,7 @@ function openDetailMenu(idx)
         for _, loc in ipairs(job.locations) do
             table.insert(opts, {
                 icon = "fa-solid fa-map-pin",
-                title = "?? " .. (loc.label or "Location"),
+                title = "📍 " .. (loc.label or "Location"),
                 description = loc.txt or "Set waypoint to this location",
                 onSelect = function()
                     setWaypoint(loc.pos, loc.label)
@@ -372,7 +413,7 @@ function openDetailMenu(idx)
 
     table.insert(opts, {
         icon = "fa-solid fa-check",
-        title = "? Accept Job",
+        title = "✅ Accept Job",
         description = "Take on the " .. job.label .. " role",
         onSelect = function()
             if isJobChangeCooldownActive() then
@@ -388,7 +429,7 @@ function openDetailMenu(idx)
 
     ox_lib:registerContext({
         id = "job_center_detail_" .. idx,
-        title = "?? " .. job.label,
+        title = "💼 " .. job.label,
         menu = "job_center_main",
         onBack = openMainMenu,
         options = opts
