@@ -483,3 +483,73 @@ Citizen.CreateThread(function()
         setupInteraction(pedHash)
     end
 end)
+
+
+RegisterNetEvent("jobcenter:openLawyerLicenses", function()
+    RSGCore.Functions.TriggerCallback("jobcenter:getPlayerJobAndMoney", function(playerJob, playerMoney, playerJobName)
+        -- Check if player is actually a lawyer
+        if playerJobName ~= "lawyer" then
+            doNotify("not_correct_job", "Lawyer", "error")
+            return
+        end
+
+        -- Get licenses available for lawyers
+        local licenses = getLicensesForJob("lawyer")
+        if #licenses == 0 then
+            doNotify("no_licenses_available", "error")
+            return
+        end
+
+        local opts = {}
+        
+      
+        for _, license in ipairs(licenses) do
+            table.insert(opts, {
+                icon = license.icon or "fa-solid fa-certificate",
+                title = license.label,
+                description = license.description .. " - $" .. license.price,
+                arrow = true,
+                onSelect = function()
+                    if playerMoney >= license.price then
+                       
+                        local confirmOpts = {
+                            {
+                                title = "✔ Confirm Purchase",
+                                description = "Purchase " .. license.label .. " for $" .. license.price,
+                                icon = "fa-solid fa-check",
+                                onSelect = function()
+                                    TriggerServerEvent("jobcenter:purchaseLicense", license.item, license.price, license.label)
+                                end
+                            },
+                            {
+                                title = "✖ Cancel",
+                                description = "Cancel purchase",
+                                icon = "fa-solid fa-times",
+                                onSelect = function()
+                                   
+                                end
+                            }
+                        }
+                        
+                        ox_lib:registerContext({
+                            id = "lawyer_license_confirm_" .. license.item,
+                            title = "✅ Confirm Purchase",
+                            options = confirmOpts
+                        })
+                        ox_lib:showContext("lawyer_license_confirm_" .. license.item)
+                    else
+                        doNotify("insufficient_funds", license.price, "error")
+                    end
+                end
+            })
+        end
+
+       
+        ox_lib:registerContext({
+            id = "lawyer_license_menu",
+            title = "⚖️ Lawyer License Shop",
+            options = opts
+        })
+        ox_lib:showContext("lawyer_license_menu")
+    end)
+end)
