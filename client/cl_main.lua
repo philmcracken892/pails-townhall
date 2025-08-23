@@ -242,6 +242,83 @@ local function getLicensesForJob(jobName)
     return licenses
 end
 
+-- NEW: Function to get general licenses (available to everyone)
+local function getGeneralLicenses()
+    if not cfg.GeneralLicenses then return {} end
+    
+    local licenses = {}
+    for _, license in ipairs(cfg.GeneralLicenses) do
+        table.insert(licenses, license)
+    end
+    return licenses
+end
+
+-- NEW: Function to open general license shop (available to all players)
+local function openGeneralLicenseMenu()
+    RSGCore.Functions.TriggerCallback("jobcenter:getPlayerJobAndMoney", function(playerJob, playerMoney, playerJobName)
+        local licenses = getGeneralLicenses()
+        if #licenses == 0 then
+            doNotify("no_licenses_available", "error")
+            return
+        end
+
+        local opts = {}
+        
+        -- Add each general license
+        for _, license in ipairs(licenses) do
+            table.insert(opts, {
+                icon = license.icon or "fa-solid fa-certificate",
+                title = license.label,
+                description = license.description .. " - $" .. license.price,
+                arrow = true,
+                onSelect = function()
+                    if playerMoney >= license.price then
+                        -- Confirm purchase dialog
+                        local confirmOpts = {
+                            {
+                                title = "✔ Confirm Purchase",
+                                description = "Purchase " .. license.label .. " for $" .. license.price,
+                                icon = "fa-solid fa-check",
+                                onSelect = function()
+                                    TriggerServerEvent("jobcenter:purchaseGeneralLicense", license.item, license.price, license.label)
+                                end
+                            },
+                            {
+                                title = "✖ Cancel",
+                                description = "Go back to license selection",
+                                icon = "fa-solid fa-times",
+                                onSelect = function()
+                                    openGeneralLicenseMenu()
+                                end
+                            }
+                        }
+                        
+                        ox_lib:registerContext({
+                            id = "general_license_confirm_" .. license.item,
+                            title = "✅ Confirm Purchase",
+                            menu = "general_license_menu",
+                            onBack = function() openGeneralLicenseMenu() end,
+                            options = confirmOpts
+                        })
+                        ox_lib:showContext("general_license_confirm_" .. license.item)
+                    else
+                        doNotify("insufficient_funds", license.price, "error")
+                    end
+                end
+            })
+        end
+
+        ox_lib:registerContext({
+            id = "general_license_menu",
+            title = "🔫 License Shop",
+            menu = "job_center_main",
+            onBack = openMainMenu,
+            options = opts
+        })
+        ox_lib:showContext("general_license_menu")
+    end)
+end
+
 local function openJobSpecificLicenseMenu(jobName, jobLabel)
     RSGCore.Functions.TriggerCallback("jobcenter:getPlayerJobAndMoney", function(playerJob, playerMoney, playerJobName)
         if playerJobName ~= jobName then
@@ -327,6 +404,20 @@ local function openMainMenu()
             }
         }
 
+        -- NEW: Add general license shop (available to everyone)
+        local generalLicenses = getGeneralLicenses()
+        if #generalLicenses > 0 then
+            table.insert(opts, {
+                title = "🔫 License Shop",
+                description = "Purchase licenses available to all citizens",
+                icon = "fa-solid fa-certificate",
+                arrow = true,
+                onSelect = function()
+                    openGeneralLicenseMenu()
+                end
+            })
+        end
+
         -- Check if current job has licenses available
         local hasLicenses = false
         local jobLabel = ""
@@ -350,9 +441,9 @@ local function openMainMenu()
         
         if hasLicenses then
             table.insert(opts, {
-                title = "📜 License Shop",
-                description = "Purchase licenses for other players",
-                icon = "fa-solid fa-certificate",
+                title = "📜 Professional License Shop",
+                description = "Purchase licenses for your profession",
+                icon = "fa-solid fa-user-tie",
                 arrow = true,
                 onSelect = function()
                     openJobSpecificLicenseMenu(playerJob, jobLabel)
@@ -476,6 +567,11 @@ RegisterNetEvent("jobcenter:licensePurchaseSuccess", function(licenseName, price
     doNotify("license_purchase_success", licenseName, price, "success")
 end)
 
+-- NEW: Event handler for general license purchase success
+RegisterNetEvent("jobcenter:generalLicensePurchaseSuccess", function(licenseName, price)
+    doNotify("license_purchase_success", licenseName, price, "success")
+end)
+
 Citizen.CreateThread(function()
     local ped, pedHash = createJobCenterNPC()
     if ped and pedHash then
@@ -484,18 +580,16 @@ Citizen.CreateThread(function()
     end
 end)
 
-
-
-
+-- Add this event handler to your job center client.lua file
 RegisterNetEvent("jobcenter:openLawyerLicenses", function()
     RSGCore.Functions.TriggerCallback("jobcenter:getPlayerJobAndMoney", function(playerJob, playerMoney, playerJobName)
-        
+        -- Check if player is actually a lawyer
         if playerJobName ~= "lawyer" then
             doNotify("not_correct_job", "Lawyer", "error")
             return
         end
 
-        
+        -- Get licenses available for lawyers
         local licenses = getLicensesForJob("lawyer")
         if #licenses == 0 then
             doNotify("no_licenses_available", "error")
@@ -504,7 +598,7 @@ RegisterNetEvent("jobcenter:openLawyerLicenses", function()
 
         local opts = {}
         
-       
+        -- Add each license available for lawyers
         for _, license in ipairs(licenses) do
             table.insert(opts, {
                 icon = license.icon or "fa-solid fa-certificate",
@@ -513,7 +607,7 @@ RegisterNetEvent("jobcenter:openLawyerLicenses", function()
                 arrow = true,
                 onSelect = function()
                     if playerMoney >= license.price then
-                       
+                        -- Confirm purchase dialog
                         local confirmOpts = {
                             {
                                 title = "✔ Confirm Purchase",
@@ -528,7 +622,7 @@ RegisterNetEvent("jobcenter:openLawyerLicenses", function()
                                 description = "Cancel purchase",
                                 icon = "fa-solid fa-times",
                                 onSelect = function()
-                                    
+                                    -- Just closes the menu
                                 end
                             }
                         }
@@ -546,10 +640,10 @@ RegisterNetEvent("jobcenter:openLawyerLicenses", function()
             })
         end
 
-       
+        -- Register and show the lawyer license menu
         ox_lib:registerContext({
             id = "lawyer_license_menu",
-            title = "⚖️ Lawyer License Shop",
+            title = "⚖️ Law License Shop",
             options = opts
         })
         ox_lib:showContext("lawyer_license_menu")
