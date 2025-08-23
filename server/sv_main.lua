@@ -47,7 +47,7 @@ local function sendDiscordLog(oldJob, newJob, userName, charName, playerId)
     )
 end
 
-local function sendLicenseDiscordLog(lawyerName, lawyerChar, licenseName, price, playerId, jobName)
+local function sendLicenseDiscordLog(playerName, playerChar, licenseName, price, playerId, licenseType)
     if webhookURL == "" then return end
     
     local embed = {
@@ -57,9 +57,9 @@ local function sendLicenseDiscordLog(lawyerName, lawyerChar, licenseName, price,
                 title = "License Purchase",
                 color = 3447003, -- Blue color
                 fields = {
-                    {name = "Issuer Username", value = lawyerName, inline = false},
-                    {name = "Issuer Character", value = lawyerChar, inline = false},
-                    {name = "Issuer Job", value = jobLabels[jobName] or jobName, inline = false},
+                    {name = "Player Username", value = playerName, inline = false},
+                    {name = "Player Character", value = playerChar, inline = false},
+                    {name = "License Type", value = licenseType or "General", inline = false},
                     {name = "Server ID", value = tostring(playerId), inline = false},
                     {name = "License Purchased", value = licenseName, inline = true},
                     {name = "Price", value = "$" .. tostring(price), inline = true}
@@ -108,6 +108,67 @@ RSGCore.Functions.CreateCallback("jobcenter:getPlayerJob", function(source, cb)
     local job = Player.PlayerData.job
     local label = job and job.label or "Unemployed"
     cb(label)
+end)
+
+-- NEW: Event handler for general license purchases (available to everyone)
+RegisterNetEvent("jobcenter:purchaseGeneralLicense", function(licenseItem, price, licenseName)
+    local src = source
+    
+    if type(licenseItem) ~= "string" or type(price) ~= "number" or type(licenseName) ~= "string" then
+        TriggerClientEvent("jobcenter:clientNotify", src, "invalid_license_data", "error")
+        return
+    end
+    
+    local Player = RSGCore.Functions.GetPlayer(src)
+    if not Player then
+        return
+    end
+    
+    local playerMoney = Player.PlayerData.money.cash or 0
+    if playerMoney < price then
+        TriggerClientEvent("jobcenter:clientNotify", src, "insufficient_funds", price, "error")
+        return
+    end
+    
+    -- Validate license exists in general licenses
+    local validLicense = false
+    if Config.GeneralLicenses then
+        for _, license in ipairs(Config.GeneralLicenses) do
+            if license.item == licenseItem and license.price == price then
+                validLicense = true
+                break
+            end
+        end
+    end
+    
+    if not validLicense then
+        TriggerClientEvent("jobcenter:clientNotify", src, "invalid_license", "error")
+        return
+    end
+    
+    -- Remove money
+    Player.Functions.RemoveMoney("cash", price, "general-license-purchase")
+    
+    -- Add the license item
+    Player.Functions.AddItem(licenseItem, 1, nil, {
+        description = licenseName .. " - Self-purchased at Job Center",
+        purchaseDate = os.date("%Y-%m-%d %H:%M:%S")
+    })
+    
+    -- Get player info for logging
+    local userName = GetPlayerName(src) or "Unknown"
+    local charinfo = Player.PlayerData.charinfo or {}
+    local charName = string.format("%s %s", charinfo.firstname or "Unknown", charinfo.lastname or "Player")
+    
+    -- Notify client of success
+    TriggerClientEvent("jobcenter:generalLicensePurchaseSuccess", src, licenseName, price)
+    
+    -- Log to Discord
+    sendLicenseDiscordLog(userName, charName, licenseName, price, src, "General Purchase")
+    
+    -- Console log
+    print(string.format("^2[JobCenter] %s (%s) purchased general license %s for $%d^7", 
+          charName, userName, licenseName, price))
 end)
 
 RegisterNetEvent("jobcenter:purchaseLicense", function(licenseItem, price, licenseName)
@@ -171,7 +232,7 @@ RegisterNetEvent("jobcenter:purchaseLicense", function(licenseItem, price, licen
     TriggerClientEvent("jobcenter:licensePurchaseSuccess", src, licenseName, price)
     
     -- Log to Discord
-    sendLicenseDiscordLog(userName, charName, licenseName, price, src, job.name)
+    sendLicenseDiscordLog(userName, charName, licenseName, price, src, "Professional License - " .. (jobLabels[job.name] or job.name))
     
     -- Console log
     print(string.format("^2[JobCenter] %s (%s) [%s] purchased %s for $%d^7", 
