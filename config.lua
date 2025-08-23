@@ -18,17 +18,34 @@ Config.InteractDistance = 2.5
 Config.CooldownSeconds = 30 
 Config.WebhookURL = "" -- If you leave this empty, Discord logging is disabled
 
--- NEW: Job-Specific License Configuration
-Config.Licenses = {
-    -- Lawyer licenses
+-- NEW: General licenses available to ALL players (no job requirement)
+Config.GeneralLicenses = {
     {
         item = "weapon_licence",
         label = "Weapon Permit",
         description = "Legal authorization to carry weapons",
         price = 500,
-        icon = "fa-solid fa-gun",
-        jobRequired = "lawyer"
+        icon = "fa-solid fa-gun"
     },
+    {
+        item = "hunting_licence",
+        label = "Hunting License",
+        description = "Permission to hunt wild animals",
+        price = 250,
+        icon = "fa-solid fa-crosshairs"
+    },
+    {
+        item = "fishing_licence",
+        label = "Fishing License",
+        description = "License to fish in all waters",
+        price = 100,
+        icon = "fa-solid fa-fish"
+    }
+}
+
+-- Job-Specific License Configuration (can only be issued by certain jobs)
+Config.Licenses = {
+    -- Lawyer licenses
     {
         item = "marriage_licence",
         label = "Marriage License",
@@ -45,7 +62,6 @@ Config.Licenses = {
         icon = "fa-solid fa-car",
         jobRequired = "taxi"
     }
-    
 }
 
 Config.Jobs = {
@@ -102,6 +118,9 @@ Config.Jobs = {
         icon = "fa-solid fa-gavel",
         label = "Lawyer",
         text = "Provide legal services and sell licenses.",
-        tutorial = "Help citizens with legal matters and process license applications."
+        tutorial = "Help citizens with legal matters and process license applications.",
+		locations = {
+            {pos = vector3(-292.30, 784.41, 119.29), label = "Law office", txt = "location of law office"}
+        }
     }
 }
