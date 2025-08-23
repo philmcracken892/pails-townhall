@@ -485,16 +485,17 @@ Citizen.CreateThread(function()
 end)
 
 
+
 RegisterNetEvent("jobcenter:openLawyerLicenses", function()
     RSGCore.Functions.TriggerCallback("jobcenter:getPlayerJobAndMoney", function(playerJob, playerMoney, playerJobName)
-        -- Check if player is actually a lawyer
+      
         if playerJobName ~= "lawyer" then
             doNotify("not_correct_job", "Lawyer", "error")
             return
         end
 
-        -- Get licenses available for lawyers
-        local licenses = getLicensesForJob("lawyer")
+       
+        local licenses = cfg.Licenses or {}
         if #licenses == 0 then
             doNotify("no_licenses_available", "error")
             return
@@ -504,14 +505,20 @@ RegisterNetEvent("jobcenter:openLawyerLicenses", function()
         
       
         for _, license in ipairs(licenses) do
+           
+            local jobInfo = ""
+            if license.jobRequired and license.jobRequired ~= "" then
+                jobInfo = " (Usually for: " .. license.jobRequired .. ")"
+            end
+            
             table.insert(opts, {
                 icon = license.icon or "fa-solid fa-certificate",
                 title = license.label,
-                description = license.description .. " - $" .. license.price,
+                description = license.description .. jobInfo .. " - $" .. license.price,
                 arrow = true,
                 onSelect = function()
                     if playerMoney >= license.price then
-                       
+                        
                         local confirmOpts = {
                             {
                                 title = "✔ Confirm Purchase",
@@ -526,7 +533,7 @@ RegisterNetEvent("jobcenter:openLawyerLicenses", function()
                                 description = "Cancel purchase",
                                 icon = "fa-solid fa-times",
                                 onSelect = function()
-                                   
+                                    
                                 end
                             }
                         }
@@ -547,7 +554,7 @@ RegisterNetEvent("jobcenter:openLawyerLicenses", function()
        
         ox_lib:registerContext({
             id = "lawyer_license_menu",
-            title = "⚖️ Lawyer License Shop",
+            title = "⚖️ Licenses Available",
             options = opts
         })
         ox_lib:showContext("lawyer_license_menu")
