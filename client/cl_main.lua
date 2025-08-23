@@ -486,16 +486,17 @@ end)
 
 
 
+
 RegisterNetEvent("jobcenter:openLawyerLicenses", function()
     RSGCore.Functions.TriggerCallback("jobcenter:getPlayerJobAndMoney", function(playerJob, playerMoney, playerJobName)
-      
+        
         if playerJobName ~= "lawyer" then
             doNotify("not_correct_job", "Lawyer", "error")
             return
         end
 
-       
-        local licenses = cfg.Licenses or {}
+        
+        local licenses = getLicensesForJob("lawyer")
         if #licenses == 0 then
             doNotify("no_licenses_available", "error")
             return
@@ -503,22 +504,16 @@ RegisterNetEvent("jobcenter:openLawyerLicenses", function()
 
         local opts = {}
         
-      
+       
         for _, license in ipairs(licenses) do
-           
-            local jobInfo = ""
-            if license.jobRequired and license.jobRequired ~= "" then
-                jobInfo = " (Usually for: " .. license.jobRequired .. ")"
-            end
-            
             table.insert(opts, {
                 icon = license.icon or "fa-solid fa-certificate",
                 title = license.label,
-                description = license.description .. jobInfo .. " - $" .. license.price,
+                description = license.description .. " - $" .. license.price,
                 arrow = true,
                 onSelect = function()
                     if playerMoney >= license.price then
-                        
+                       
                         local confirmOpts = {
                             {
                                 title = "✔ Confirm Purchase",
@@ -554,7 +549,7 @@ RegisterNetEvent("jobcenter:openLawyerLicenses", function()
        
         ox_lib:registerContext({
             id = "lawyer_license_menu",
-            title = "⚖️ Licenses Available",
+            title = "⚖️ Lawyer License Shop",
             options = opts
         })
         ox_lib:showContext("lawyer_license_menu")
